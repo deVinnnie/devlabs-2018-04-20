@@ -18,7 +18,7 @@ class WebServiceCallSimulation extends Simulation {
     val baseName = "webservice-call-greeting"
     val requestName = baseName + "-request"
     val scenarioName = baseName + "-scenario"
-    val URI = "/greeting"
+    val URI = "/hello"
 
     val httpConf = http
             .baseURL(baseURL)

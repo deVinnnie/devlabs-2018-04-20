@@ -1,0 +1,137 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'groovy'
+//    id 'scala'
+    //id 'org.springframework.boot' version '1.5.12.RELEASE'
+    id "com.energizedwork.webdriver-binaries" version "1.0"
+    id "com.energizedwork.idea-base" version "1.2"
+}
+
+jar {
+    baseName = 'dev'
+    version =  '1.0-SNAPSHOT'
+}
+
+ext {
+    springBootVersion = '1.5.12.RELEASE'
+    seleniumVersion = '3.6.0'
+    gebVersion = "2.1"
+    seleniumVersion = "3.6.0"
+
+    // The drivers we want to use
+    drivers = ["firefox", "chrome", "chromeHeadless"]
+
+    ext {
+        groovyVersion = '2.4.12'
+        gebVersion = '2.1'
+        seleniumVersion = '3.6.0'
+        chromeDriverVersion = '2.32'
+        geckoDriverVersion = '0.18.0'
+    }
+}
+
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.5'
+}
+
+build.mustRunAfter clean
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+    // ---------------------------------------------
+    // Spring Boot
+    // ---------------------------------------------
+//    compile group: 'org.springframework.boot', name: 'spring-boot-starter', version:"${springBootVersion}"
+//    compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version:"${springBootVersion}"
+//    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version:"${springBootVersion}"
+//    compile group: 'org.springframework.boot', name: 'spring-boot-starter-aop', version:"${springBootVersion}"
+//    compile group: 'org.springframework.boot', name: 'spring-boot-devtools', version:"${springBootVersion}"
+    // ---------------------------------------------
+
+    // DB
+    //compile group: 'com.h2database', name: 'h2', version:'1.4.197'
+
+    // Test Dependencies
+
+    // ---------------------------------------------
+    // Geb
+    // ---------------------------------------------
+    testCompile "org.codehaus.groovy:groovy-all:2.4.12"
+
+    //testCompile "org.gebish:geb-core:2.1"
+
+    testCompile "org.seleniumhq.selenium:selenium-firefox-driver:${seleniumVersion}"
+    testCompile "org.seleniumhq.selenium:selenium-chrome-driver:$seleniumVersion"
+
+    testCompile "org.gebish:geb-junit4:${gebVersion}"
+
+    // ---------------------------------------------
+    // Gatling
+    // ---------------------------------------------
+    testCompile('io.gatling.highcharts:gatling-charts-highcharts:2.3.1')
+
+}
+
+
+webdriverBinaries {
+    chromedriver chromeDriverVersion
+    geckodriver geckoDriverVersion
+}
+
+drivers.each { driver ->
+    task "${driver}Test"(type: Test) {
+        group JavaBasePlugin.VERIFICATION_GROUP
+
+        outputs.upToDateWhen { false }  // Always run tests
+
+        systemProperty "geb.build.reportsDir", reporting.file("geb/$name")
+        systemProperty "geb.env", driver
+    }
+}
+//
+//bootRun {
+//    addResources = true
+//}
+
+test {
+    dependsOn drivers.collect { tasks["${it}Test"] }
+    enabled = false
+//    systemProperties "geb.build.reportsDir": "$reportsDir/geb"
+}
+
+/**
+ * Gatling load tests
+ */
+task testLoad(type: JavaExec) {
+    description = 'Test load the Spring Boot web service with Gatling'
+    group = 'Load Test'
+    classpath = sourceSets.test.runtimeClasspath
+    jvmArgs = [
+            // workaround for https://github.com/gatling/gatling/issues/2689
+            "-Dgatling.core.directory.binaries=${sourceSets.test.output.classesDir.toString()}",
+            "-Dlogback.configurationFile=${logbackGatlingConfig()}"
+    ]
+    main = 'io.gatling.app.Gatling'
+    args = [
+            '--simulation', 'webservice.gatling.simulation.WebServiceCallSimulation',
+            '--results-folder', "${buildDir}/gatling-results",
+            '--binaries-folder', sourceSets.test.output.classesDir.toString() // ignored because of above bug
+    ]
+}
+
+def logbackGatlingConfig() {
+    return sourceSets.test.resources.find { it.name == 'logback-gatling.xml'};
+}

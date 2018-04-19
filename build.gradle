@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'idea'
     id 'groovy'
-//    id 'scala'
+    id 'scala'
     //id 'org.springframework.boot' version '1.5.12.RELEASE'
     id "com.energizedwork.webdriver-binaries" version "1.0"
     id "com.energizedwork.idea-base" version "1.2"
@@ -99,6 +99,7 @@ drivers.each { driver ->
 
         systemProperty "geb.build.reportsDir", reporting.file("geb/$name")
         systemProperty "geb.env", driver
+        systemProperty "geb.build.baseUrl", "http://www.gebish.org/"
     }
 }
 //

@@ -5,6 +5,8 @@ import io.gatling.core.scenario.Simulation
 import io.gatling.http.Predef._
 
 import scala.concurrent.duration._
+import org.kohsuke.randname.RandomNameGenerator
+import scala.util.Random
 
 class WebServiceCallSimulation extends Simulation {
 
@@ -28,16 +30,28 @@ class WebServiceCallSimulation extends Simulation {
             .acceptEncodingHeader("gzip, deflate")
             .userAgentHeader("Mozilla/5.0 (Windows NT 5.1; rv:31.0) Gecko/20100101 Firefox/31.0")
 
+
+    val rnd = new RandomNameGenerator(0)
+    val feeder = Iterator.continually(Map("word" -> rnd.next()))
+
     val scn = scenario(scenarioName)
             .during(testTimeSecs) {
-        exec(
-                http(requestName)
-                        .get(URI)
-                        .check(status.is(200))
-        ).pause(minWaitMs, maxWaitMs)
-    }
+                feed(feeder)
+                .exec(
+                    http(requestName)
+                      .post("/create")
+                      .body(StringBody("""{ "data": "${word}" }""")).asJSON
+                      .check(status.is(200))
+                )
+                .pause(minWaitMs, maxWaitMs)
+                .exec(
+                  http("get")
+                    .get("/names")
+                    .check(status.is(200))
+                )
+            }
 
     setUp(
             scn.inject(rampUsers(noOfUsers) over (rampUpTimeSecs))
-            ).protocols(httpConf)
+    ).protocols(httpConf)
 }
